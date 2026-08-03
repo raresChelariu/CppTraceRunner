@@ -137,15 +137,49 @@ export async function genereazaVgTrace(cod, intrare = '') {
         `Valgrind nu a produs fisier de trace.\n${executie.stderr.slice(0, 2000)}`)
     }
 
+    // --- conversia in formatul OPT ------------------------------------------
+    //
+    // Fisierul .vgtrace e brut: obiecte {addr,kind,type,size,val}, fara heap.
+    // vg_to_opt_trace.py reconstruieste heap-ul urmarind pointerii si codeaza
+    // valorile ca C_DATA / C_STRUCT / C_ARRAY. Scriptul deduce singur numele
+    // trace-ului din cel al sursei, de aceea primeste doar "prog.cpp".
+    const convertor = process.env.CONVERTOR ?? '/opt/vg_to_opt_trace.py'
+    const conversie = await ruleazaProces('python3', [
+      convertor,
+      '--jsondump',
+      'prog.cpp',
+    ], { timeout: LIMITE.timeoutExecutie, cwd: dir })
+
+    if (conversie.expirat)
+      throw new EroareRulare('timeout', 'Conversia trace-ului a depasit timpul permis.')
+
+    if (conversie.cod !== 0)
+      throw new EroareRulare('executie',
+        `Conversia trace-ului a esuat (cod ${conversie.cod}).\n` +
+        `stderr: ${conversie.stderr.slice(0, 1500)}\n` +
+        `vgtrace: ${vgtrace.length} octeti`)
+
+    let opt
+    try {
+      opt = JSON.parse(conversie.stdout)
+    } catch (e) {
+      throw new EroareRulare('executie',
+        `Convertorul nu a scos JSON valid: ${e.message}\n` +
+        `stdout: ${JSON.stringify(conversie.stdout.slice(0, 400))}\n` +
+        `stderr: ${conversie.stderr.slice(0, 800)}`)
+    }
+
     let iesire = await readFile(caleIesire, 'utf8')
     if (iesire.length > LIMITE.stdoutBytes)
       iesire = iesire.slice(0, LIMITE.stdoutBytes) + '\n[...iesire trunchiata...]'
 
     return {
+      opt,
       vgtrace,
       iesire,
       stderrCompilare: compilare.stderr,   // avertismentele de la g++ raman utile
       stderrValgrind: executie.stderr,
+      stderrConvertor: conversie.stderr,
     }
   } finally {
     if (fdIntrare !== null) try { closeSync(fdIntrare) } catch {}

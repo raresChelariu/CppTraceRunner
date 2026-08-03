@@ -1,19 +1,11 @@
-// Traduce pasii bruti in forma simpla consumata de DebuggerVisual.vue:
-// valorile sunt deja formatate ca text, ca sa nu ducem logica de decodare in Vue.
+// Traduce trace-ul in format OPT (iesirea lui vg_to_opt_trace.py) in forma
+// simpla consumata de DebuggerVisual.vue: valorile sunt deja formatate ca text,
+// ca sa nu ducem logica de decodare in Vue.
 //
-// Portat din AlgPlayground/scripts/genereaza-trace.mjs (liniile 81-203), care
-// facea acelasi lucru cu raspunsul primit de la pythontutor.
+// Portat din AlgPlayground/scripts/genereaza-trace.mjs, care facea acelasi lucru
+// cu raspunsul primit de la pythontutor - acelasi format, aceeasi origine.
 
 export const MAX_PASI = 1000
-
-// Ia prima cheie care exista dintre variantele date (snake_case sau camelCase).
-function camp(obiect, ...variante) {
-  for (const v of variante)
-    if (obiect?.[v] !== undefined) return obiect[v]
-  return undefined
-}
-
-// --- decodarea valorilor -----------------------------------------------------
 
 const esteData = (v) => Array.isArray(v) && v[0] === 'C_DATA'
 const esteStruct = (v) => Array.isArray(v) && v[0] === 'C_STRUCT'
@@ -42,7 +34,9 @@ const numeScurt = (n) => String(n ?? '').split('(')[0]
 
 const traduceEveniment = { call: 'apel', return: 'retur', step_line: 'linie' }
 
-export function normalizeaza(pasiBruti, { cod, intrare = '' }) {
+export function normalizeaza(opt, { cod, intrare = '' }) {
+  const trace = Array.isArray(opt?.trace) ? opt.trace : []
+
   // --- remaparea adreselor ---------------------------------------------------
   //
   // Adresele reale (0x5C7BC80) nu spun nimic unui elev si fac schema ilizibila.
@@ -50,7 +44,7 @@ export function normalizeaza(pasiBruti, { cod, intrare = '' }) {
   // prima data in trace, adica exact ordinea alocarii lor cu "new".
   const adrese = new Map()
 
-  for (const pas of pasiBruti)
+  for (const pas of trace)
     for (const adresa of Object.keys(pas.heap ?? {}))
       if (!adrese.has(adresa))
         adrese.set(adresa, `0x${(0x100 + adrese.size * 0x10).toString(16).toUpperCase()}`)
@@ -60,7 +54,6 @@ export function normalizeaza(pasiBruti, { cod, intrare = '' }) {
     return adrese.get(valoare) ?? String(valoare)
   }
 
-  // Intoarce { tip, val, pointer } pentru o valoare simpla.
   function citesteData(v) {
     const tip = String(v[2])
     const valoare = v[3]
@@ -118,24 +111,26 @@ export function normalizeaza(pasiBruti, { cod, intrare = '' }) {
 
   // --- traducerea pasilor ----------------------------------------------------
 
-  const pasi = pasiBruti.slice(0, MAX_PASI).map((pas) => ({
-    eveniment: traduceEveniment[pas.eveniment] ?? 'linie',
-    linie: pas.linie,
-    stiva: (pas.stiva ?? []).map((cadru) => ({
-      functie: numeScurt(camp(cadru, 'func_name', 'funcName')),
-      activ: Boolean(camp(cadru, 'is_highlighted', 'isHighlighted')),
-      linie: camp(cadru, 'line') ?? null,
-      locale: listaVariabile(
-        camp(cadru, 'ordered_varnames', 'orderedVarnames'),
-        camp(cadru, 'encoded_locals', 'encodedLocals'),
-      ),
+  const pasi = trace.slice(0, MAX_PASI).map((pas) => ({
+    eveniment: traduceEveniment[pas.event] ?? 'linie',
+    linie: pas.line,
+    stiva: (pas.stack_to_render ?? []).map((cadru) => ({
+      functie: numeScurt(cadru.func_name),
+      activ: Boolean(cadru.is_highlighted),
+      linie: cadru.line ?? null,
+      locale: listaVariabile(cadru.ordered_varnames, cadru.encoded_locals),
     })),
-    globale: listaVariabile(pas.globaleOrdonate, pas.globale),
+    globale: listaVariabile(pas.ordered_globals, pas.globals),
     heap: Object.entries(pas.heap ?? {}).map(([adresa, v]) => citesteBlocHeap(adresa, v)),
-    consola: pas.consola ?? '',
+    consola: pas.stdout ?? '',
   }))
 
   const rezultat = { cod, intrare, pasi }
-  if (pasiBruti.length > MAX_PASI) rezultat.trunchiat = pasiBruti.length
+  if (trace.length > MAX_PASI) rezultat.trunchiat = trace.length
+
+  const ultim = trace.at(-1)
+  if (ultim?.event === 'uncaught_exception' || ultim?.exception_msg)
+    rezultat.exceptie = ultim.exception_msg ?? 'Programul s-a oprit cu eroare.'
+
   return rezultat
 }

@@ -29,18 +29,41 @@ RUN ./autogen.sh \
     && make install
 
 # ---------------------------------------------------------------------------
-# Etapa 2 - imaginea finala
+# Etapa 2 - portarea convertorului la Python 3
+# ---------------------------------------------------------------------------
+#
+# vg_to_opt_trace.py e scris de Philip Guo in 2015, in Python 2. El transforma
+# fisierul .vgtrace brut (obiecte {addr,kind,type,size,val}) in formatul OPT
+# (C_DATA / C_STRUCT / C_ARRAY), reconstruieste heap-ul urmarind pointerii si
+# filtreaza cadrele nevalide. E stratul pe care il consuma normalizeaza.mjs.
+#
+# py_compile la final: daca 2to3 nu reuseste conversia, build-ul pica aici, nu
+# la prima rulare.
+FROM debian:bookworm AS convertor
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 2to3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY vendor/vg_to_opt_trace.py /conv/vg_to_opt_trace.py
+RUN 2to3 -w -n /conv/vg_to_opt_trace.py \
+    && python3 -m py_compile /conv/vg_to_opt_trace.py
+
+# ---------------------------------------------------------------------------
+# Etapa 3 - imaginea finala
 # ---------------------------------------------------------------------------
 FROM node:22-bookworm-slim
 
 # g++ pentru compilarea codului elevilor; libc6-dbg pentru ca Valgrind sa poata
 # citi simbolurile din glibc (fara el, trace-ul are zone oarbe).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      g++ libc6-dbg \
+      g++ libc6-dbg python3 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=valgrind /opt/spp-valgrind /opt/spp-valgrind
+COPY --from=convertor /conv/vg_to_opt_trace.py /opt/vg_to_opt_trace.py
 ENV PATH="/opt/spp-valgrind/bin:${PATH}"
+ENV CONVERTOR=/opt/vg_to_opt_trace.py
 
 WORKDIR /app
 COPY package.json ./

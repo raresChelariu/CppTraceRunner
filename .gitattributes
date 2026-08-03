@@ -1,0 +1,5 @@
+# Totul se executa in Linux (container, GitHub Actions), deci fisierele trebuie
+# sa aiba LF chiar si cand repo-ul e clonat pe Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

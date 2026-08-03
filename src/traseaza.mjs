@@ -29,6 +29,14 @@ export async function traseaza(cod, intrare = '') {
   // Iesirea completa a programului, utila la afisare langa vizualizator.
   rezultat.iesire = iesire
 
+  // Valgrind citeste consola din fisierul in care scrie programul, deci vede
+  // doar ce a fost golit din buffer. Un "cout << rez;" fara endl ramane in
+  // buffer pana la terminarea programului, si ultimul pas ar arata consola
+  // goala desi programul a afisat ceva. Dupa terminare stim tot ce s-a afisat,
+  // asa ca ultimul pas primeste iesirea completa.
+  const ultim = rezultat.pasi.at(-1)
+  if (ultim && iesire.length > (ultim.consola?.length ?? 0)) ultim.consola = iesire
+
   // Avertismentele de la g++ raman utile intr-un context didactic.
   if (stderrCompilare?.trim()) rezultat.avertismente = stderrCompilare.trim()
 

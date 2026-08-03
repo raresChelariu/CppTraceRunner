@@ -47,8 +47,32 @@ function scoateOpririlePeAcolada(trace) {
   })
 }
 
+// Acelasi artefact, dar la intrarea in main, unde nu exista eveniment de apel
+// care sa il tradeze. SPP-Valgrind pune primul pas pe acolada lui main; Valgrind-ul
+// din 2015 il punea pe prima instructiune. Il mutam acolo, iar daca astfel ajunge
+// pe aceeasi linie cu pasul urmator, ramane unul singur.
+function corecteazaPrimulPas(trace, cod) {
+  if (trace.length === 0) return trace
+
+  const linii = cod.split('\n')
+  const continut = (nr) => (linii[nr - 1] ?? '').trim()
+
+  if (continut(trace[0].line) !== '{') return trace
+
+  let nr = trace[0].line + 1
+  while (nr <= linii.length && continut(nr) === '') nr++
+
+  const copie = [...trace]
+  copie[0] = { ...copie[0], line: nr }
+  if (copie[1]?.line === nr && copie[1].event === copie[0].event) copie.shift()
+  return copie
+}
+
 export function normalizeaza(opt, { cod, intrare = '' }) {
-  const trace = scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : [])
+  const trace = corecteazaPrimulPas(
+    scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : []),
+    cod,
+  )
 
   // --- remaparea adreselor ---------------------------------------------------
   //

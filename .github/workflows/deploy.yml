@@ -69,13 +69,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Pasii de Azure sunt sariti cat timp variabilele nu sunt setate, ca sa nu
+      # avem un workflow rosu inainte sa existe infrastructura. Imaginea se
+      # publica oricum pe ghcr.io - de acolo o consuma si generarea de trace-uri
+      # din AlgPlayground.
       - uses: azure/login@v2
+        if: vars.AZURE_CLIENT_ID != ''
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Actualizeaza Container App
+        if: vars.AZURE_CLIENT_ID != ''
         run: |
           az containerapp update \
             --name "$APP" \
@@ -83,6 +89,7 @@ jobs:
             --image "${IMAGINE}:${{ github.sha }}"
 
       - name: Verifica sanatatea
+        if: vars.AZURE_CLIENT_ID != ''
         run: |
           fqdn=$(az containerapp show --name "$APP" --resource-group "$RG" \
             --query properties.configuration.ingress.fqdn -o tsv)

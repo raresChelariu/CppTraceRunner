@@ -53,12 +53,28 @@ gratuite pe luna. De masurat efectiv:
 time docker run --rm -i cpp-trace-runner cli - "6 1 2 3 1 2 3" < exemple/lista-dublata.cpp > /dev/null
 ```
 
-### D. Programe fara heap, cu recursivitate, cu erori de compilare
+### D. ~~Programe fara heap, cu apeluri imbricate~~ — facut
 
-Singurul exemplu testat e `lista-dublata.cpp`. Inainte de a genera cele ~200 de
-trace-uri ale lectiilor, merita adaugate in CI si celelalte exemple existente din
-`AlgPlayground/scripts/exemple/`: `acelasi-nume.cpp`, `parametri-copie.cpp`,
-`stiva-apeluri.cpp`.
+Toate cele patru exemple din `AlgPlayground/scripts/exemple/` ruleaza in CI, cu
+referinte. Doua lucruri gasite pe parcurs:
+
+- **Consola si buferizarea:** Valgrind afla ce s-a afisat citind fisierul in
+  care scrie programul, deci un `cout` fara `endl` parea sa nu afiseze nimic.
+  Rezolvat cu `stdbuf -o0`, ca la SeePlusPlus, plus un backstop pe ultimul pas.
+- **Primul pas pe acolada lui `main`:** SPP-Valgrind il emite mereu; g++ 9.3 pe
+  pythontutor il emitea doar la `lista-dublata`. Am pastrat comportamentul
+  consecvent (acolada mereu) si am aliniat referintele exemplelor simple.
+
+**Datorie ramasa pentru regenerare:** la `stiva-apeluri` apare un pas in plus la
+inceput, deci in `functii.md` trimiterea "pasul 1 si pasul 3" devine "pasul 2 si
+pasul 4". De facut **odata cu** inlocuirea trace-urilor statice, nu inainte —
+site-ul live foloseste inca trace-urile vechi.
+
+### D2. Recursivitate si erori de compilare
+
+Niciun exemplu din CI nu are recursivitate reala (`stiva-apeluri` are doar
+apeluri imbricate) si nu testam raspunsul la cod care nu compileaza. De adaugat
+cand apare primul exemplu recursiv in lectii.
 
 ### E. Avertismentele DWARF
 

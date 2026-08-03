@@ -1,7 +1,8 @@
 {
   "sursa": "pythontutor, g++ 9.3.0 - trace-ul pe care a fost scrisa lectia",
-  "pasi": 11,
+  "pasi": 12,
   "secventa": [
+    "16",
     "17",
     "11:apel",
     "12",
@@ -20,5 +21,6 @@
   ],
   "consolaFinala": "8",
   "maxHeap": 0,
-  "maxStiva": 3
+  "maxStiva": 3,
+  "nota": "Ajustat manual fata de trace-ul pythontutor: SPP-Valgrind pune primul pas pe acolada lui main, la fel ca in lista-dublata (comportament consecvent). g++ 9.3 omitea acest pas la exemplele simple. Aici pasul e in plus: la regenerarea trace-urilor, functii.md trebuie ajustat - pasul 1 si pasul 3 devin pasul 2 si pasul 4."
 }

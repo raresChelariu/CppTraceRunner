@@ -47,32 +47,14 @@ function scoateOpririlePeAcolada(trace) {
   })
 }
 
-// Acelasi artefact, dar la intrarea in main, unde nu exista eveniment de apel
-// care sa il tradeze. SPP-Valgrind pune primul pas pe acolada lui main; Valgrind-ul
-// din 2015 il punea pe prima instructiune. Il mutam acolo, iar daca astfel ajunge
-// pe aceeasi linie cu pasul urmator, ramane unul singur.
-function corecteazaPrimulPas(trace, cod) {
-  if (trace.length === 0) return trace
-
-  const linii = cod.split('\n')
-  const continut = (nr) => (linii[nr - 1] ?? '').trim()
-
-  if (continut(trace[0].line) !== '{') return trace
-
-  let nr = trace[0].line + 1
-  while (nr <= linii.length && continut(nr) === '') nr++
-
-  const copie = [...trace]
-  copie[0] = { ...copie[0], line: nr }
-  if (copie[1]?.line === nr && copie[1].event === copie[0].event) copie.shift()
-  return copie
-}
+// NOTA despre primul pas: SPP-Valgrind pune mereu primul pas pe acolada
+// deschisa a lui main. Valgrind-ul din 2015 (g++ 9.3) o facea doar uneori -
+// la lista-dublata da, la exemplele simple nu; diferenta vine din tabelele de
+// linii ale compilatorului. Pastram comportamentul consecvent al SPP, iar
+// referintele exemplelor simple au fost aliniate la el (vezi ci/referinte/).
 
 export function normalizeaza(opt, { cod, intrare = '' }) {
-  const trace = corecteazaPrimulPas(
-    scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : []),
-    cod,
-  )
+  const trace = scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : [])
 
   // --- remaparea adreselor ---------------------------------------------------
   //

@@ -115,7 +115,14 @@ export async function genereazaVgTrace(cod, intrare = '') {
     fdIntrare = openSync(caleIntrare, 'r')
     fdIesire = openSync(caleIesire, 'w+')
 
-    const executie = await ruleazaProces('valgrind', [
+    // stdbuf -o0 dezactiveaza buferizarea stdout-ului in programul rulat.
+    // Fara el, un "cout << rez;" fara endl ramane in buffer pana la terminarea
+    // programului, iar Valgrind - care citeste fisierul ca sa afle ce s-a
+    // afisat pana la fiecare pas - ar arata consola goala. SeePlusPlus
+    // foloseste acelasi truc.
+    const executie = await ruleazaProces('stdbuf', [
+      '-o0',
+      'valgrind',
       '--tool=memcheck',
       '--source-filename=prog.cpp',
       '--trace-filename=prog.vgtrace',

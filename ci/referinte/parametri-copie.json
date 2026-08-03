@@ -2,7 +2,7 @@
   "sursa": "pythontutor, g++ 9.3.0 - trace-ul pe care a fost scrisa lectia",
   "pasi": 10,
   "secventa": [
-    "13",
+    "12",
     "14",
     "7:apel",
     "8",
@@ -19,5 +19,6 @@
   ],
   "consolaFinala": "in dubleaza, x = 10\nin main, a = 5\n",
   "maxHeap": 0,
-  "maxStiva": 2
+  "maxStiva": 2,
+  "nota": "Ajustat manual fata de trace-ul pythontutor: SPP-Valgrind pune primul pas pe acolada lui main, la fel ca in lista-dublata (comportament consecvent). g++ 9.3 omitea acest pas la exemplele simple."
 }

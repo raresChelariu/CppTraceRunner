@@ -10,7 +10,7 @@
 #   az ad app federated-credential create --id <appId> --parameters '{
 #     "name": "master",
 #     "issuer": "https://token.actions.githubusercontent.com",
-#     "subject": "repo:<owner>/cpp-trace-runner:ref:refs/heads/master",
+#     "subject": "repo:raresChelariu/CppTraceRunner:ref:refs/heads/master",
 #     "audiences": ["api://AzureADTokenExchange"]
 #   }'
 #
@@ -51,6 +51,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Numele de imagine Docker trebuie sa fie lowercase, iar repo-ul se numeste
+      # CppTraceRunner. Fara conversia asta, push-ul esueaza cu
+      # "invalid reference format: repository name must be lowercase".
+      - name: Numele imaginii
+        run: echo "IMAGINE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       # Tag pe SHA, nu doar latest: Container Apps creeaza o revizie per imagine,
       # deci rollback-ul e o singura comanda.
       - uses: docker/build-push-action@v6
@@ -58,8 +64,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ env.IMAGINE }}:${{ github.sha }}
+            ${{ env.IMAGINE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -74,7 +80,7 @@ jobs:
           az containerapp update \
             --name "$APP" \
             --resource-group "$RG" \
-            --image "ghcr.io/${{ github.repository }}:${{ github.sha }}"
+            --image "${IMAGINE}:${{ github.sha }}"
 
       - name: Verifica sanatatea
         run: |

@@ -91,7 +91,18 @@ Astea sunt exact lucrurile pe care le explica lectia
 [debugger.md](https://github.com/raresChelariu/AlgPlayground/blob/master/docs/cpp/unelte/debugger.md).
 Daca vreunul difera, lectia devine gresita — deci verificarea asta nu e optionala.
 
-## 7. Cat dureaza si cat consuma?
+## 7. Pachetul de pe ghcr.io e public?
+
+Imaginile impinse pe `ghcr.io` sunt **private implicit**. Azure Container Apps nu
+o poate trage fara credentiale, iar planul era tocmai sa evitam registry-ul platit.
+
+Dupa primul `deploy`, pe pagina pachetului:
+*Package settings* → *Change visibility* → **Public**.
+
+Daca preferi sa ramana privata, trebuie `az containerapp registry set` cu un PAT
+**classic** — token-urile fine-grained inca nu suporta scope-ul `packages`.
+
+## 8. Cat dureaza si cat consuma?
 
 Pentru dimensionarea Container App-ului si estimarea free grantului:
 

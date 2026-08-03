@@ -1,115 +1,68 @@
-# De verificat la primul build cu Docker real
+# Stare: ce e verificat si ce nu
 
-Codul din `src/` a fost scris pornind de la documentatia si sursele
-[SeePlusPlus](https://github.com/knazir/SeePlusPlus), **fara sa fi rulat vreodata
-Valgrind-ul modificat**. Lista de mai jos e ce trebuie confirmat inainte sa
-consideram runner-ul functional. In ordinea in care crapa.
+Actualizat dupa prima rulare verde in GitHub Actions.
 
-## 1. Se compileaza SPP-Valgrind in `debian:bookworm`?
+## Verificat
 
-```bash
-docker build -t cpp-trace-runner .
-```
+| # | Ce | Rezultat |
+|---|---|---|
+| 1 | SPP-Valgrind se compileaza pe `debian:bookworm` | da — `valgrind-3.27.0.GIT`, ~3 min cu cache rece |
+| 2 | Formatul `.vgtrace` | **nu** e format OPT. E brut: `{addr,kind,type,size,val}`, chei `stack`/`locals`, fara `heap`, JSON pe mai multe linii. Conversia o face `vg_to_opt_trace.py` |
+| 3 | stdout pe fisier seekable | da — consola iese `"3\n"`. Cu un pipe nu ar fi mers |
+| 4 | stdin | da — programul citeste `6` si cele sase numere. Cod nou, SeePlusPlus nu are asa ceva |
+| 5 | Valgrind sub restrictii de container | da, in Docker standard |
+| 6 | Trace-ul corespunde lectiei | da, dupa filtrarea opririi pe acolada — **106 pasi, identic cu originalul** |
 
-Riscul principal din tot proiectul. README-ul lor spune ca fork-ul e Valgrind
-**3.27.0**, modernizat pentru ARM64 si binare GCC 11+, deci sansele sunt bune —
-dar nu e verificat pe bookworm.
+Comparatia cu `ci/referinta-lista-dublata.json` ruleaza la fiecare build si **pica**
+daca secventa de pasi, adresele de heap sau globalele finale difera de trace-ul
+pe care a fost scrisa lectia.
 
-Daca esueaza: incearca `ubuntu:22.04` sau `ubuntu:24.04` ca baza in etapa 1.
-Atentie sa ramana **acelasi glibc** in ambele etape, altfel Valgrind-ul copiat nu
-porneste.
+### Detaliul de la punctul 6
 
-## 2. Numele exacte ale campurilor din `.vgtrace`
+SPP-Valgrind emite, la intrarea intr-o functie, un pas pe linia acoladei
+deschise, urmat de evenimentul de apel pe aceeasi linie. Valgrind-ul din 2015 nu
+il emitea, iar lectia spune explicit ca sageata sare la prima linie **de sub**
+acolada. `scoateOpririlePeAcolada()` din `src/normalizeaza.mjs` il elimina.
 
-`src/parseVgTrace.mjs` presupune ca fiecare inregistrare are o linie JSON cu
-campuri de tipul `event`, `line`, `stack_to_render`, `globals`,
-`ordered_globals`, `heap`. Accepta si camelCase, dar **nu am vazut fisierul**.
+## De verificat
 
-Verificare:
+### A. Pachetul de pe ghcr.io e public?
 
-```bash
-docker run --rm -i cpp-trace-runner cli - "6 1 2 3 1 2 3" \
-  < exemple/lista-dublata.cpp > /tmp/trace.json
-```
+Imaginile sunt **private implicit**, iar Azure Container Apps nu poate trage una
+privata fara credentiale — ceea ce ar anula ideea de a evita registry-ul platit.
 
-Daca iese gol sau cu campuri lipsa, scoate `.vgtrace`-ul brut si uita-te la el:
-adauga temporar un `console.error(vgtrace.slice(0, 3000))` in `src/traseaza.mjs`.
-
-Referinta: `backend/src/parse_vg_trace.ts` din SeePlusPlus (MIT) — separatorul e
-`=== pg_trace_inst ===`, iar `ExecutionPoint` are exact campurile de mai sus in
-camelCase.
-
-## 3. Redirectarea stdout catre un fisier seekable
-
-Cea mai subtila parte, in `src/ruleaza.mjs`.
-
-Valgrind-ul modificat **citeste inapoi din descriptorul 1** ca sa stie ce a afisat
-programul pana la fiecare pas. Are nevoie de un fisier obisnuit, pe care poate
-face `lseek` — un pipe **nu** merge. In shell asta se scrie `exec 1<>fisier`; noi
-deschidem fisierul cu `'w+'` si dam descriptorul ca stdout.
-
-**Simptom daca e gresit:** trace-ul are pasi corecti, dar campul `consola` e gol
-peste tot. Daca vezi asta, aici e cauza.
-
-## 4. Merge stdin?
-
-SeePlusPlus **nu** suporta stdin — `handler.py` primeste doar codul. Noi
-redirectam `intrare.txt` catre program. E cod nou, netestat de nimeni.
-
-`lista-dublata.cpp` citeste `6` si apoi sase numere, deci daca stdin-ul nu merge,
-programul blocheaza sau citeste gunoi si trace-ul iese scurt.
-
-## 5. Ruleaza Valgrind sub restrictiile de container?
-
-Valgrind ruleaza in user space si trebuie sa poata face `mmap` la adrese
-specifice. In Docker standard merge. `compose.yml` are deja `cap_drop: ALL`,
-`no-new-privileges` si `pids_limit`, tocmai ca sa aflam local daca ceva il
-deranjeaza:
-
-```bash
-docker compose up --build
-```
-
-**In Azure Container Apps nu e confirmat.** De testat efectiv la primul deploy,
-nu de presupus. Pe AWS Lambda se stie ca merge (SeePlusPlus ruleaza asa in
-productie) — daca Container Apps refuza, aia e ruta de rezerva.
-
-## 6. Iese acelasi trace ca al lui pythontutor?
-
-Comparatie cu ce e deja in `AlgPlayground/docs/public/traces/lista-dublata.json`.
-
-Nu se va potrivi la octet — pythontutor folosea g++ 9.3.0, noi folosim g++ 12 din
-bookworm, iar Valgrind-ul e alta versiune. Ce trebuie sa se potriveasca:
-
-- numarul de pasi, aproximativ;
-- adresele remapate: `0x100`, `0x110`, `0x120`... in ordinea alocarii;
-- `a[0]` ramane `?` tot timpul (vezi lectia);
-- localele lui `FLsiDublu` au `?` pana primesc valoare, globalele pornesc de la `0`;
-- consola finala: `3`.
-
-Astea sunt exact lucrurile pe care le explica lectia
-[debugger.md](https://github.com/raresChelariu/AlgPlayground/blob/master/docs/cpp/unelte/debugger.md).
-Daca vreunul difera, lectia devine gresita — deci verificarea asta nu e optionala.
-
-## 7. Pachetul de pe ghcr.io e public?
-
-Imaginile impinse pe `ghcr.io` sunt **private implicit**. Azure Container Apps nu
-o poate trage fara credentiale, iar planul era tocmai sa evitam registry-ul platit.
-
-Dupa primul `deploy`, pe pagina pachetului:
 *Package settings* → *Change visibility* → **Public**.
 
-Daca preferi sa ramana privata, trebuie `az containerapp registry set` cu un PAT
-**classic** — token-urile fine-grained inca nu suporta scope-ul `packages`.
+Alternativa: `az containerapp registry set` cu un PAT **classic** (token-urile
+fine-grained inca nu suporta scope-ul `packages`).
 
-## 8. Cat dureaza si cat consuma?
+### B. Ruleaza Valgrind in Azure Container Apps?
 
-Pentru dimensionarea Container App-ului si estimarea free grantului:
+Valgrind ruleaza in user space si trebuie sa poata face `mmap` la adrese
+specifice. In Docker merge (verificat), pe AWS Lambda se stie ca merge
+(SeePlusPlus ruleaza asa in productie). **Container Apps nu e testat** — de probat
+efectiv la primul deploy, nu de presupus. Daca refuza, Lambda e ruta de rezerva.
+
+### C. Cat dureaza si cat consuma o rulare?
+
+Necesar pentru dimensionarea Container App-ului si pentru estimarea free
+grantului. Planul presupune ~3 s la 2 vCPU / 4 GiB, de unde ~30.000 de rulari
+gratuite pe luna. De masurat efectiv:
 
 ```bash
 time docker run --rm -i cpp-trace-runner cli - "6 1 2 3 1 2 3" < exemple/lista-dublata.cpp > /dev/null
-docker stats --no-stream
 ```
 
-Planul presupune ~3 s si 2 vCPU / 4 GiB. Daca iese mult mai lent, se recalculeaza
-cele ~30.000 de rulari gratuite pe luna.
+### D. Programe fara heap, cu recursivitate, cu erori de compilare
+
+Singurul exemplu testat e `lista-dublata.cpp`. Inainte de a genera cele ~200 de
+trace-uri ale lectiilor, merita adaugate in CI si celelalte exemple existente din
+`AlgPlayground/scripts/exemple/`: `acelasi-nume.cpp`, `parametri-copie.cpp`,
+`stiva-apeluri.cpp`.
+
+### E. Avertismentele DWARF
+
+`evaluate_Dwarf3_Expr: unhandled DW_OP_ 0x9b` apare de zeci de ori la fiecare
+rulare. `0x9b` e `DW_OP_form_tls_address`, adresare thread-local din libstdc++ —
+vine din bibliotecile de sistem, nu din codul elevului, si nu a afectat trace-ul.
+De urmarit daca apare vreodata la variabile din program.

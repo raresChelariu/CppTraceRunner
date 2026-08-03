@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Compilarea Valgrind din surse dureaza minute. Fara cache de layere,
+      # fiecare rulare ar plati din nou pretul asta.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: cpp-trace-runner:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test - CLI
+        run: |
+          docker run --rm -i cpp-trace-runner:ci cli - "6 1 2 3 1 2 3" \
+            < exemple/lista-dublata.cpp > trace.json
+          node - <<'EOF'
+          const t = JSON.parse(require('fs').readFileSync('trace.json', 'utf8'))
+          const pasi = t.pasi?.length ?? 0
+          const consola = t.pasi?.at(-1)?.consola ?? ''
+          console.log(`pasi=${pasi} consola=${JSON.stringify(consola)}`)
+          if (pasi < 10) { console.error('Prea putini pasi - trace-ul pare gol.'); process.exit(1) }
+          if (!consola.includes('3')) { console.error('Programul ar fi trebuit sa afiseze 3.'); process.exit(1) }
+          if (!t.pasi.some(p => p.heap?.length > 0)) { console.error('Heap gol - nodurile alocate cu new lipsesc.'); process.exit(1) }
+          console.log('OK')
+          EOF
+
+      - name: Smoke test - server
+        run: |
+          docker run -d --name runner -p 8080:8080 cpp-trace-runner:ci
+          for i in $(seq 1 30); do
+            curl -sf localhost:8080/sanatate && break
+            sleep 1
+          done
+          curl -sf -X POST localhost:8080/trace \
+            -H 'content-type: application/json' \
+            -d '{"cod":"#include <iostream>\nint main(){int x=7;std::cout<<x;return 0;}","intrare":""}' \
+            | head -c 300
+          docker rm -f runner
+
+      - name: Log la esec
+        if: failure()
+        run: docker logs runner || true

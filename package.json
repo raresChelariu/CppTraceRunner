@@ -1,0 +1,15 @@
+{
+  "name": "cpp-trace-runner",
+  "version": "0.1.0",
+  "description": "Genereaza trace-uri de executie pas cu pas pentru programe C++, sub un Valgrind modificat",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "server": "node src/index.mjs server",
+    "cli": "node src/index.mjs cli",
+    "test": "node --test test/"
+  }
+}

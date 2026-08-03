@@ -1,0 +1,16 @@
+services:
+  runner:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      MAX_SIMULTAN: "2"
+    # Aceleasi restrictii ca in productie, ca sa nu descoperim diferente la deploy.
+    # Valgrind are nevoie sa faca mmap la adrese specifice; daca ceva de aici il
+    # deranjeaza, aflam local, nu in Azure.
+    read_only: false
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 1g

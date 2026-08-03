@@ -72,6 +72,50 @@ const areNeinitializate = pasi.some((p) =>
   (p.stiva ?? []).some((c) => (c.locale ?? []).some((v) => v.val === '?')))
 if (!areNeinitializate) probleme.push('Nicio locala cu "?" - lectia despre variabile neinitializate ar deveni gresita.')
 
+// --- comparatie cu trace-ul pe care a fost scrisa lectia ----------------------
+//
+// Lectia debugger.md face afirmatii concrete: "ruleaza pana la pasul 45",
+// adresele sunt 0x100..0x160, a[0] ramane "?". Daca noul motor produce alta
+// secventa, lectia devine gresita fara ca nimeni sa observe. De aceea comparam
+// cu invariantii extrasi din trace-ul original (pythontutor, g++ 9.3.0).
+
+const caleRef = new URL('./referinta-lista-dublata.json', import.meta.url)
+if (existsSync(caleRef)) {
+  const ref = JSON.parse(readFileSync(caleRef, 'utf8'))
+  const secventa = pasi.map((x) => `${x.linie}${x.eveniment === 'linie' ? '' : ':' + x.eveniment}`)
+
+  const diferente = []
+
+  if (secventa.length !== ref.secventa.length)
+    diferente.push(`pasi: referinta ${ref.secventa.length}, acum ${secventa.length}`)
+
+  // Primul loc unde secventele nu mai coincid - acolo e cauza.
+  const n = Math.min(secventa.length, ref.secventa.length)
+  let i = 0
+  while (i < n && secventa[i] === ref.secventa[i]) i++
+  if (i < n || secventa.length !== ref.secventa.length) {
+    const de = (a) => a.slice(Math.max(0, i - 4), i + 6).join(' ')
+    diferente.push(`prima divergenta la pasul ${i}:`)
+    diferente.push(`  referinta: ${de(ref.secventa)}`)
+    diferente.push(`  acum:      ${de(secventa)}`)
+  }
+
+  const adrese = [...new Set(pasi.flatMap((x) => (x.heap ?? []).map((h) => h.adr)))]
+  if (adrese.join(' ') !== ref.adreseHeap.join(' '))
+    diferente.push(`adrese heap: referinta [${ref.adreseHeap}], acum [${adrese}]`)
+
+  const globale = (ultim?.globale ?? []).map((v) => `${v.nume}=${v.val}`)
+  if (globale.join(' ') !== ref.globaleFinale.join(' '))
+    diferente.push(`globale finale: referinta [${ref.globaleFinale}], acum [${globale}]`)
+
+  if (diferente.length > 0) {
+    adnotare('warning', 'Diferenta fata de lectie', diferente.join('\n'))
+    console.warn(diferente.join('\n'))
+  } else {
+    console.log('Trace identic cu referinta lectiei.')
+  }
+}
+
 if (probleme.length > 0) {
   adnotare('error', 'Verificari picate', probleme.join('\n'))
   for (const p of probleme) console.error(`FAIL: ${p}`)

@@ -1,0 +1,24 @@
+{
+  "sursa": "pythontutor, g++ 9.3.0 - trace-ul pe care a fost scrisa lectia",
+  "pasi": 11,
+  "secventa": [
+    "17",
+    "11:apel",
+    "12",
+    "7:apel",
+    "8",
+    "9:retur",
+    "13",
+    "14:retur",
+    "18",
+    "19",
+    "20:retur"
+  ],
+  "adreseHeap": [],
+  "globaleFinale": [
+    "rez=8"
+  ],
+  "consolaFinala": "8",
+  "maxHeap": 0,
+  "maxStiva": 3
+}

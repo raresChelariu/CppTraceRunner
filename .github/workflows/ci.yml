@@ -26,18 +26,23 @@ jobs:
 
       - name: Smoke test - CLI
         run: |
+          set +e
           docker run --rm -i cpp-trace-runner:ci cli - "6 1 2 3 1 2 3" \
-            < exemple/lista-dublata.cpp > trace.json
-          node - <<'EOF'
-          const t = JSON.parse(require('fs').readFileSync('trace.json', 'utf8'))
-          const pasi = t.pasi?.length ?? 0
-          const consola = t.pasi?.at(-1)?.consola ?? ''
-          console.log(`pasi=${pasi} consola=${JSON.stringify(consola)}`)
-          if (pasi < 10) { console.error('Prea putini pasi - trace-ul pare gol.'); process.exit(1) }
-          if (!consola.includes('3')) { console.error('Programul ar fi trebuit sa afiseze 3.'); process.exit(1) }
-          if (!t.pasi.some(p => p.heap?.length > 0)) { console.error('Heap gol - nodurile alocate cu new lipsesc.'); process.exit(1) }
-          console.log('OK')
-          EOF
+            < exemple/lista-dublata.cpp > trace.json 2> cli-stderr.txt
+          cod=$?
+          set -e
+          cat cli-stderr.txt
+          node ci/verifica.mjs trace.json "$cod" cli-stderr.txt
+
+      - name: Salveaza trace-ul
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace
+          path: |
+            trace.json
+            cli-stderr.txt
+          if-no-files-found: ignore
 
       - name: Smoke test - server
         run: |

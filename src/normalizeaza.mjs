@@ -34,8 +34,21 @@ const numeScurt = (n) => String(n ?? '').split('(')[0]
 
 const traduceEveniment = { call: 'apel', return: 'retur', step_line: 'linie' }
 
+// SPP-Valgrind emite, la intrarea intr-o functie, un pas obisnuit pe linia
+// acoladei deschise, urmat imediat de evenimentul de apel pe aceeasi linie.
+// Valgrind-ul din 2015 folosit de pythontutor nu il emitea, iar lectia spune
+// explicit ca la apel sageata sare la prima linie DE SUB acolada. Il scoatem,
+// ca sa nu rescriem lectia dupa un detaliu de implementare.
+function scoateOpririlePeAcolada(trace) {
+  return trace.filter((pas, i) => {
+    const urmator = trace[i + 1]
+    return !(urmator?.event === 'call' && pas.event !== 'call' && pas.event !== 'return'
+             && pas.line === urmator.line)
+  })
+}
+
 export function normalizeaza(opt, { cod, intrare = '' }) {
-  const trace = Array.isArray(opt?.trace) ? opt.trace : []
+  const trace = scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : [])
 
   // --- remaparea adreselor ---------------------------------------------------
   //

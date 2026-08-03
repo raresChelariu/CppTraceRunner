@@ -108,9 +108,11 @@ if (existsSync(caleRef)) {
   if (globale.join(' ') !== ref.globaleFinale.join(' '))
     diferente.push(`globale finale: referinta [${ref.globaleFinale}], acum [${globale}]`)
 
+  // Eroare, nu avertisment: o divergenta aici inseamna ca textul lectiei nu mai
+  // descrie ce vede elevul in vizualizator.
   if (diferente.length > 0) {
-    adnotare('warning', 'Diferenta fata de lectie', diferente.join('\n'))
-    console.warn(diferente.join('\n'))
+    probleme.push(...diferente)
+    adnotare('error', 'Diferenta fata de lectie', diferente.join('\n'))
   } else {
     console.log('Trace identic cu referinta lectiei.')
   }

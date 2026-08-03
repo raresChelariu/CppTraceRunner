@@ -7,18 +7,21 @@ import { normalizeaza } from './normalizeaza.mjs'
 export { EroareRulare }
 
 export async function traseaza(cod, intrare = '') {
-  const { vgtrace, iesire, stderrCompilare } = await genereazaVgTrace(cod, intrare)
+  const { vgtrace, iesire, stderrCompilare, stderrValgrind } = await genereazaVgTrace(cod, intrare)
 
   // Cu DUMP_VGTRACE=1 scoatem inceputul fisierului brut la stderr. E singurul mod
   // de a vedea formatul real cand nu avem acces la masina care ruleaza.
-  if (process.env.DUMP_VGTRACE)
+  if (process.env.DUMP_VGTRACE) {
     process.stderr.write(`--- vgtrace brut (${vgtrace.length} octeti) ---\n${vgtrace.slice(0, 3000)}\n--- sfarsit ---\n`)
+    process.stderr.write(`--- stderr valgrind ---\n${(stderrValgrind ?? '').slice(0, 3000)}\n--- sfarsit ---\n`)
+  }
 
   const pasiBruti = parseVgTrace(vgtrace)
   if (pasiBruti.length === 0)
     throw new EroareRulare('executie',
       `Trace-ul nu contine niciun pas de executie. Fisierul are ${vgtrace.length} octeti. ` +
-      `Inceput: ${JSON.stringify(vgtrace.slice(0, 400))}`)
+      `Inceput: ${JSON.stringify(vgtrace.slice(0, 300))}. ` +
+      `stderr valgrind: ${JSON.stringify((stderrValgrind ?? '').slice(0, 800))}`)
 
   const rezultat = normalizeaza(pasiBruti, { cod, intrare })
 

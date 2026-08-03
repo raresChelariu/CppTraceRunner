@@ -81,13 +81,20 @@ export async function genereazaVgTrace(cod, intrare = '') {
     await writeFile(caleIntrare, intrare.endsWith('\n') || intrare === '' ? intrare : intrare + '\n', 'utf8')
 
     // --- compilare ---------------------------------------------------------
+    //
+    // Numele sunt RELATIVE, iar procesele ruleaza cu cwd = dir. Valgrind-ul
+    // modificat compara --source-filename cu numele inregistrat in DWARF, iar
+    // g++ scrie acolo exact sirul primit in linia de comanda. Daca dam cale
+    // absoluta la compilare si alta forma la valgrind, nu se instrumenteaza
+    // nicio linie si trace-ul iese gol - fara niciun mesaj de eroare.
+    // pythontutor lucreaza la fel: compileaza usercode.cpp in directorul curent.
     const compilare = await ruleazaProces('g++', [
       '-std=c++17',
       '-ggdb',
       '-O0',
       '-fno-omit-frame-pointer',
-      '-o', caleExe,
-      caleSursa,
+      '-o', 'prog',
+      'prog.cpp',
     ], { timeout: LIMITE.timeoutCompilare, cwd: dir })
 
     if (compilare.expirat)
@@ -110,10 +117,10 @@ export async function genereazaVgTrace(cod, intrare = '') {
 
     const executie = await ruleazaProces('valgrind', [
       '--tool=memcheck',
-      `--source-filename=${caleSursa}`,
-      `--trace-filename=${caleTrace}`,
+      '--source-filename=prog.cpp',
+      '--trace-filename=prog.vgtrace',
       '--read-var-info=yes',
-      caleExe,
+      './prog',
     ], { timeout: LIMITE.timeoutExecutie, cwd: dir, fdIntrare, fdIesire })
 
     closeSync(fdIntrare); fdIntrare = null

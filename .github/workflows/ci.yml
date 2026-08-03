@@ -55,3 +55,34 @@ jobs:
       - name: Log la esec
         if: failure()
         run: docker logs runner || true
+
+      # Log-urile complete de Actions cer autentificare, dar adnotarile se vad
+      # public. Cand ceva pica, scoatem diagnosticul prin ::error:: ca sa fie
+      # citibil fara login.
+      - name: Diagnostic Valgrind
+        if: failure()
+        run: |
+          set +e
+          {
+            echo "== versiune =="
+            docker run --rm --entrypoint valgrind cpp-trace-runner:ci --version
+            echo "== flagurile de care depindem =="
+            docker run --rm --entrypoint valgrind cpp-trace-runner:ci --help-debug 2>&1 \
+              | grep -iE "source-filename|trace-filename|read-var-info" \
+              || echo "NU APAR in --help-debug"
+            echo "== rulare CLI cu vgtrace brut =="
+            docker run --rm -i -e DUMP_VGTRACE=1 cpp-trace-runner:ci \
+              cli - "6 1 2 3 1 2 3" < exemple/lista-dublata.cpp 2>&1 >/dev/null
+          } > diag.txt 2>&1
+          cat diag.txt
+          # Adnotarile nu suporta linii noi literale; %0A e forma escapata.
+          printf '::error title=Diagnostic::%s\n' \
+            "$(head -c 4000 diag.txt | sed -z 's/\n/%0A/g')"
+
+      - name: Salveaza diagnosticul
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic
+          path: diag.txt
+          if-no-files-found: ignore

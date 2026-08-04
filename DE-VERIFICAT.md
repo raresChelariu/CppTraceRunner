@@ -13,9 +13,29 @@ Actualizat dupa prima rulare verde in GitHub Actions.
 | 5 | Valgrind sub restrictii de container | da, in Docker standard |
 | 6 | Trace-ul corespunde lectiei | da, dupa filtrarea opririi pe acolada — **106 pasi, identic cu originalul** |
 
-Comparatia cu `ci/referinta-lista-dublata.json` ruleaza la fiecare build si **pica**
-daca secventa de pasi, adresele de heap sau globalele finale difera de trace-ul
-pe care a fost scrisa lectia.
+Comparatia cu `ci/referinte/*.json` ruleaza la fiecare build si **pica** daca
+difera secventa de pasi, **semnatura stivei** (functii, linii, locale si valorile
+lor), adresele de heap, consola sau globalele finale.
+
+> Semnatura stivei a fost adaugata dupa ce un cadru de apel etichetat gresit a
+> trecut nevazut prin CI verde: se comparau doar `(linie, eveniment)`. Cand
+> adaugi un camp nou in trace, adauga-l si in comparatie.
+
+### Cadrul la primul apel dintr-o functie
+
+Prologul functiei apelate nu si-a stabilit inca frame pointer-ul, iar
+`vg_to_opt_trace.py` identifica cadrele dupa FP — deci pune in varf o copie a
+apelantului:
+
+```
+3: linia 11 call [main@17 | main@17*]                  <- ar trebui cub@11
+5: linia  7 call [main@17 | cub@12 | patrat@7*]        <- corect, FP deja setat
+```
+
+`reparaCadrulDeApel()` din `src/normalizeaza.mjs` il reconstruieste din pasul
+urmator, cu toate valorile pe `?`. Rezultatul e **identic caracter cu caracter**
+cu ce producea pythontutor, verificat pe `lista-dublata` (106 pasi), care nu a
+fost folosita la depanare.
 
 ### Detaliul de la punctul 6
 

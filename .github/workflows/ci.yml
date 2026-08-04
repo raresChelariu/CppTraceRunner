@@ -48,10 +48,10 @@ jobs:
           done
           exit $esec
 
-      # Temporar: structura OPT bruta pentru stiva-apeluri, ca sa vedem ce ne da
-      # convertorul la primul apel din main. De scos dupa ce se lamureste.
+      # Structura OPT bruta, doar la esec: arata ce ne da convertorul inainte de
+      # filtrele din normalizeaza. Asa s-a gasit cadrul de apel duplicat.
       - name: Structura OPT bruta
-        if: always()
+        if: failure()
         run: |
           docker run --rm -i -e DUMP_OPT=1 cpp-trace-runner:ci cli - "" \
             < exemple/stiva-apeluri.cpp > /dev/null 2> opt.txt || true

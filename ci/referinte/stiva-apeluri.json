@@ -1,5 +1,5 @@
 {
-  "sursa": "pythontutor, g++ 9.3.0 - trace-ul pe care a fost scrisa lectia",
+  "sursa": "Generat din trace-urile produse de runner si verificat manual fata de trace-urile pythontutor si fata de textul lectiilor. Pasii de apel/retur din lista-dublata sunt identici cu cei ai pythontutor. Diferenta acceptata: SPP-Valgrind emite consecvent un prim pas pe acolada lui main, pe care g++ 9.3 il emitea doar uneori.",
   "pasi": 12,
   "secventa": [
     "16",
@@ -15,12 +15,25 @@
     "19",
     "20:retur"
   ],
+  "stive": [
+    "main@16*{}",
+    "main@17*{}",
+    "main@17{} | cub@11*{x=?,y=?}",
+    "main@17{} | cub@12*{x=2,y=?}",
+    "main@17{} | cub@12{x=2,y=?} | patrat@7*{x=?}",
+    "main@17{} | cub@12{x=2,y=?} | patrat@8*{x=2}",
+    "main@17{} | cub@12{x=2,y=?} | patrat@9*{x=2}",
+    "main@17{} | cub@13*{x=2,y=4}",
+    "main@17{} | cub@14*{x=2,y=4}",
+    "main@18*{}",
+    "main@19*{}",
+    "main@20*{}"
+  ],
   "adreseHeap": [],
   "globaleFinale": [
     "rez=8"
   ],
   "consolaFinala": "8",
   "maxHeap": 0,
-  "maxStiva": 3,
-  "nota": "Ajustat manual fata de trace-ul pythontutor: SPP-Valgrind pune primul pas pe acolada lui main, la fel ca in lista-dublata (comportament consecvent). g++ 9.3 omitea acest pas la exemplele simple. Aici pasul e in plus: la regenerarea trace-urilor, functii.md trebuie ajustat - pasul 1 si pasul 3 devin pasul 2 si pasul 4."
+  "maxStiva": 3
 }

@@ -59,6 +59,11 @@ function scoateOpririlePeAcolada(trace) {
 // ceea ce e si adevarat, si exact ce preda lectia: cadrul se creeaza intai,
 // copierea parametrilor vine imediat dupa.
 function reparaCadrulDeApel(trace) {
+  const inlocuiesteVarful = (pas, stiva, varf) => ({
+    ...pas,
+    stack_to_render: [...stiva.slice(0, -1), varf],
+  })
+
   return trace.map((pas, i) => {
     if (pas.event !== 'call') return pas
 
@@ -67,26 +72,39 @@ function reparaCadrulDeApel(trace) {
 
     const varf = stiva[stiva.length - 1]
     const dedesubt = stiva[stiva.length - 2]
-    if (varf.func_name !== dedesubt.func_name || varf.line !== dedesubt.line) return pas
-
     const corect = (trace[i + 1]?.stack_to_render ?? []).at(-1)
-    if (!corect || corect.func_name === dedesubt.func_name) return pas
+    if (!corect) return pas
 
-    const numeVar = corect.ordered_varnames ?? []
-    const locale = {}
-    for (const nume of numeVar) {
-      const v = corect.encoded_locals?.[nume]
-      locale[nume] = esteData(v) ? [v[0], v[1], v[2], '<UNINITIALIZED>'] : v
+    const esteCopie = varf.func_name === dedesubt.func_name && varf.line === dedesubt.line
+
+    // Cadrul e o copie a apelantului si functia apelata are alt nume: il
+    // reconstruim din pasul urmator, cu valorile pe "?".
+    // Daca pasul urmator e deja inapoi in apelant (functie cu corp gol), nu avem
+    // de unde sti nimic - lasam asa cum e.
+    if (esteCopie && corect.func_name !== dedesubt.func_name) {
+      const numeVar = corect.ordered_varnames ?? []
+      const locale = {}
+      for (const nume of numeVar) {
+        const v = corect.encoded_locals?.[nume]
+        locale[nume] = esteData(v) ? [v[0], v[1], v[2], '<UNINITIALIZED>'] : v
+      }
+      return inlocuiesteVarful(pas, stiva, {
+        ...varf,
+        func_name: corect.func_name,
+        line: pas.line,
+        ordered_varnames: numeVar,
+        encoded_locals: locale,
+      })
     }
 
-    const reparat = {
-      ...varf,
-      func_name: corect.func_name,
-      line: pas.line,
-      ordered_varnames: numeVar,
-      encoded_locals: locale,
-    }
-    return { ...pas, stack_to_render: [...stiva.slice(0, -1), reparat] }
+    // La apel recursiv apelantul si apelatul au acelasi nume, iar cadrul nou e
+    // corect (are deja parametrul pe "?") - doar linia a ramas cea a apelantului.
+    // Fara corectia asta, vizualizatorul arata doua cadre "factorial() ln 8" in
+    // timp ce sageata e pe linia 5, adica pe acolada functiei apelate.
+    if (varf.line !== pas.line)
+      return inlocuiesteVarful(pas, stiva, { ...varf, line: pas.line })
+
+    return pas
   })
 }
 

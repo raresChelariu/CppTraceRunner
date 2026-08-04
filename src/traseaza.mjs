@@ -18,6 +18,18 @@ export async function traseaza(cod, intrare = '') {
     process.stderr.write(`--- OPT: ${(opt?.trace ?? []).length} pasi, chei: ${Object.keys(opt ?? {}).join(',')} ---\n`)
   }
 
+  // Structura OPT inainte de filtrele din normalizeaza - singurul mod de a vedea
+  // ce ne da convertorul cand nu putem rula local.
+  if (process.env.DUMP_OPT) {
+    const cadru = (c) => `${String(c.func_name ?? '?').split('(')[0]}@${c.line}${c.is_highlighted ? '*' : ''}`
+    const rand = (p, i) =>
+      `${String(i).padStart(3)}: linia ${String(p.line).padStart(3)} ${String(p.event ?? '?').padEnd(10)}` +
+      ` [${(p.stack_to_render ?? []).map(cadru).join(' | ')}]`
+    process.stderr.write(`--- OPT brut (${opt.trace.length} pasi) ---\n`)
+    process.stderr.write(opt.trace.map(rand).join('\n'))
+    process.stderr.write('\n--- sfarsit OPT ---\n')
+  }
+
   if (!Array.isArray(opt?.trace) || opt.trace.length === 0)
     throw new EroareRulare('executie',
       `Trace-ul convertit nu contine pasi. vgtrace avea ${vgtrace.length} octeti. ` +

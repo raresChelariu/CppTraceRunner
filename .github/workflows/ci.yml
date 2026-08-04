@@ -48,6 +48,17 @@ jobs:
           done
           exit $esec
 
+      # Temporar: structura OPT bruta pentru stiva-apeluri, ca sa vedem ce ne da
+      # convertorul la primul apel din main. De scos dupa ce se lamureste.
+      - name: Structura OPT bruta
+        if: always()
+        run: |
+          docker run --rm -i -e DUMP_OPT=1 cpp-trace-runner:ci cli - "" \
+            < exemple/stiva-apeluri.cpp > /dev/null 2> opt.txt || true
+          sed -n '/OPT brut/,/sfarsit OPT/p' opt.txt
+          printf '::notice title=OPT stiva-apeluri::%s\n' \
+            "$(sed -n '/OPT brut/,/sfarsit OPT/p' opt.txt | head -c 3000 | sed -z 's/\n/%0A/g')"
+
       - name: Salveaza trace-urile
         if: always()
         uses: actions/upload-artifact@v4

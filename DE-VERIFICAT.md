@@ -90,11 +90,29 @@ inceput, deci in `functii.md` trimiterea "pasul 1 si pasul 3" devine "pasul 2 si
 pasul 4". De facut **odata cu** inlocuirea trace-urilor statice, nu inainte —
 site-ul live foloseste inca trace-urile vechi.
 
-### D2. Recursivitate si erori de compilare
+### D2. ~~Recursivitate~~ — facut
 
-Niciun exemplu din CI nu are recursivitate reala (`stiva-apeluri` are doar
-apeluri imbricate) si nu testam raspunsul la cod care nu compileaza. De adaugat
-cand apare primul exemplu recursiv in lectii.
+`exemple/recursiv.cpp` (factorial cu `n` citit de la tastatura, adancime 5) e in
+CI, cu referinta verificata pas cu pas.
+
+Recursivitatea functioneaza: cadrele sunt reale, parintii isi pastreaza valorile
+(`n=4`, `n=3`, `n=2`), iar fiecare apel nou porneste cu `n=?`. A iesit la iveala
+o problema mai mica: cadrul nou ramanea pe linia apelantului, deci vizualizatorul
+ar fi aratat doua cadre `factorial() ln 8` in timp ce sageata era pe linia 5.
+
+Cauza: apelantul si apelatul au acelasi nume, iar conditia care evita reparatiile
+inutile bloca si acest caz. `reparaCadrulDeApel()` trateaza acum doua situatii
+separat — cadru complet gresit (reconstructie) si cadru corect cu linie invechita
+(doar linia).
+
+Doua nepotriviri de linie raman acceptate, documentate in
+`ci/referinte/recursiv.json`.
+
+### D3. Erori de compilare
+
+Nu testam ce se intampla cu cod care nu compileaza. Runner-ul intoarce
+`{ eroare: "compilare", mesaje }`, dar nu exista exemplu in CI. Conteaza abia
+cand apare playground-ul, unde elevii vor trimite si cod gresit.
 
 ### E. Avertismentele DWARF
 

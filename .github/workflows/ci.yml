@@ -24,29 +24,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Fiecare exemplu are sursa .cpp si, alaturi, intrarea in .in - aceeasi
-      # conventie pe care o va folosi si generarea trace-urilor din AlgPlayground.
-      # Ruleaza toate exemplele, apoi raporteaza; nu se opreste la primul esec,
-      # ca sa vedem dintr-o rulare care merg si care nu.
+      # Acelasi script pe care il rulezi si local, ca sa nu existe "merge la mine
+      # dar pica in CI".
       - name: Genereaza si verifica toate exemplele
-        run: |
-          esec=0
-          mkdir -p iesire
-          for sursa in exemple/*.cpp; do
-            nume=$(basename "$sursa" .cpp)
-            intrare=""
-            [ -f "exemple/$nume.in" ] && intrare=$(cat "exemple/$nume.in")
-            echo "::group::$nume"
-            set +e
-            docker run --rm -i cpp-trace-runner:ci cli - "$intrare" \
-              < "$sursa" > "iesire/$nume.json" 2> "iesire/$nume.stderr"
-            cod=$?
-            set -e
-            tail -3 "iesire/$nume.stderr" || true
-            node ci/verifica.mjs "$nume" "iesire/$nume.json" "$cod" "iesire/$nume.stderr" || esec=1
-            echo "::endgroup::"
-          done
-          exit $esec
+        run: ci/testeaza.sh cpp-trace-runner:ci
 
       # Structura OPT bruta, doar la esec: arata ce ne da convertorul inainte de
       # filtrele din normalizeaza. Asa s-a gasit cadrul de apel duplicat.

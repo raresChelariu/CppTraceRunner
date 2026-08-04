@@ -66,16 +66,44 @@ Are nevoie de Docker. Daca masina ta nu are virtualizare, foloseste **GitHub
 Codespaces** — `.devcontainer/` e configurat cu docker-in-docker.
 
 ```bash
-docker build -t cpp-trace-runner .
+npm run build      # docker build -t cpp-trace-runner:ci .
+npm test           # ruleaza toate exemplele si le compara cu referintele
+```
 
+```bash
 # CLI, o singura rulare
-docker run --rm -i cpp-trace-runner cli - "6 1 2 3 1 2 3" < exemple/lista-dublata.cpp
+docker run --rm -i cpp-trace-runner:ci cli - "6 1 2 3 1 2 3" < exemple/lista-dublata.cpp
 
 # server HTTP
-docker run --rm -p 8080:8080 cpp-trace-runner
+docker run --rm -p 8080:8080 cpp-trace-runner:ci
 curl -X POST localhost:8080/trace -H 'content-type: application/json' \
   -d '{"cod":"#include <iostream>\nint main(){int x=1;return 0;}","intrare":""}'
 ```
+
+## Teste
+
+`npm test` (adica `ci/testeaza.sh`) ruleaza fiecare `exemple/*.cpp` cu intrarea din
+`.in`-ul de alaturi si compara rezultatul cu `ci/referinte/<nume>.json`. **Acelasi
+script ruleaza si in CI**, ca sa nu existe "merge la mine dar pica in CI".
+
+Referintele contin, pentru fiecare pas: linia, evenimentul, **semnatura completa a
+stivei** (functii, linii, variabile locale si valorile lor), adresele de heap,
+consola si globalele finale. Comparatia raporteaza **primul** pas care difera.
+
+Semnatura stivei a fost adaugata dupa ce un cadru de apel etichetat gresit a trecut
+nevazut prin CI verde — se comparau doar `(linie, eveniment)`. Daca adaugi un camp
+nou in trace, adauga-l si in comparatie.
+
+### Un exemplu nou
+
+1. scrii `exemple/nume.cpp` si `exemple/nume.in`;
+2. rulezi `npm test` — pica, pentru ca nu exista referinta, dar **afiseaza
+   semnatura stivei**;
+3. verifici manual iesirea: e chiar ce ar trebui sa vada elevul?
+4. abia apoi scrii `ci/referinte/nume.json`.
+
+Pasul 3 nu e formal. Un exemplu fara referinta e tratat ca eroare, nu ca omisiune,
+tocmai ca sa nu se strecoare exemple neverificate.
 
 ## API
 

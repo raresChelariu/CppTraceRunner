@@ -10,6 +10,7 @@
   "scripts": {
     "server": "node src/index.mjs server",
     "cli": "node src/index.mjs cli",
-    "test": "node --test test/"
+    "build": "docker build -t cpp-trace-runner:ci .",
+    "test": "bash ci/testeaza.sh"
   }
 }

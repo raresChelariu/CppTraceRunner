@@ -73,6 +73,22 @@ const caleRef = new URL(`./referinte/${nume}.json`, import.meta.url)
 
 if (!existsSync(caleRef)) {
   probleme.push(`Nu exista ci/referinte/${nume}.json - nu pot verifica fata de lectie.`)
+
+  // Propunem referinta, ca sa nu fie nevoie de reconstruit de mana. NU o scriem
+  // singuri: pasul de verificat manual - "e chiar ce ar trebui sa vada elevul?" -
+  // e tot rostul referintei.
+  const propunere = {
+    sursa: 'DE VERIFICAT MANUAL inainte de a fi acceptata ca referinta',
+    pasi: pasi.length,
+    secventa,
+    stive,
+    adreseHeap: adrese,
+    globaleFinale: globale,
+    consolaFinala: consola,
+    maxHeap,
+    maxStiva,
+  }
+  adnotare('notice', `${nume}: referinta propusa`, JSON.stringify(propunere, null, 2))
 } else {
   const ref = JSON.parse(readFileSync(caleRef, 'utf8'))
 

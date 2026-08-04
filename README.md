@@ -97,13 +97,15 @@ nou in trace, adauga-l si in comparatie.
 ### Un exemplu nou
 
 1. scrii `exemple/nume.cpp` si `exemple/nume.in`;
-2. rulezi `npm test` — pica, pentru ca nu exista referinta, dar **afiseaza
-   semnatura stivei**;
-3. verifici manual iesirea: e chiar ce ar trebui sa vada elevul?
-4. abia apoi scrii `ci/referinte/nume.json`.
+2. rulezi `npm test` — pica, pentru ca nu exista referinta, dar **iti propune
+   una**, gata formatata;
+3. verifici manual propunerea: e chiar ce ar trebui sa vada elevul? cadrele sunt
+   pe liniile bune? valorile apar la momentul potrivit?
+4. abia apoi o salvezi ca `ci/referinte/nume.json`.
 
-Pasul 3 nu e formal. Un exemplu fara referinta e tratat ca eroare, nu ca omisiune,
-tocmai ca sa nu se strecoare exemple neverificate.
+Pasul 3 nu e formal, si de aceea propunerea nu se scrie singura pe disc. Un exemplu
+fara referinta e tratat ca eroare, nu ca omisiune, tocmai ca sa nu se strecoare
+exemple neverificate.
 
 ## API
 

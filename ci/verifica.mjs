@@ -46,6 +46,12 @@ const maxHeap = Math.max(0, ...pasi.map((p) => p.heap?.length ?? 0))
 const maxStiva = Math.max(0, ...pasi.map((p) => p.stiva?.length ?? 0))
 const consola = ultim?.consola ?? ''
 const secventa = pasi.map((x) => `${x.linie}${x.eveniment === 'linie' ? '' : ':' + x.eveniment}`)
+
+// Semnatura stivei, cu tot cu locale. Comparatia pe (linie, eveniment) singura a
+// lasat sa treaca un cadru de apel etichetat gresit - de aceea si continutul.
+const cadru = (c) =>
+  `${c.functie}@${c.linie}${c.activ ? '*' : ''}{${(c.locale ?? []).map((v) => `${v.nume}=${v.val}`).join(',')}}`
+const stive = pasi.map((x) => (x.stiva ?? []).map(cadru).join(' | '))
 const adrese = [...new Set(pasi.flatMap((x) => (x.heap ?? []).map((h) => h.adr)))]
 const globale = (ultim?.globale ?? []).map((v) => `${v.nume}=${v.val}`)
 
@@ -84,6 +90,18 @@ if (!existsSync(caleRef)) {
     probleme.push(`  acum:      ${de(secventa)}`)
   }
 
+  // Referintele mai vechi nu au semnaturi de stiva; le comparam doar cand exista.
+  if (Array.isArray(ref.stive)) {
+    const m = Math.min(stive.length, ref.stive.length)
+    let j = 0
+    while (j < m && stive[j] === ref.stive[j]) j++
+    if (j < m) {
+      probleme.push(`stiva difera la pasul ${j}:`)
+      probleme.push(`  referinta: ${ref.stive[j]}`)
+      probleme.push(`  acum:      ${stive[j]}`)
+    }
+  }
+
   if (adrese.join(' ') !== ref.adreseHeap.join(' '))
     probleme.push(`adrese heap: referinta [${ref.adreseHeap}], acum [${adrese}]`)
 
@@ -111,6 +129,13 @@ const rezumat = [
   `globale finale: ${globale.join(' ') || '(fara globale)'}`,
   `functii vazute: ${[...new Set(pasi.flatMap((p) => (p.stiva ?? []).map((c) => c.functie)))].join(', ')}`,
   `evenimente: ${[...new Set(pasi.map((p) => p.eveniment))].join(', ')}`,
+  '',
+  'stiva la pasii care conteaza (primii doi, apeluri si retururi):',
+  ...pasi
+    .map((p, i) => [i, p])
+    .filter(([i, p]) => i < 2 || p.eveniment !== 'linie')
+    .slice(0, 14)
+    .map(([i, p]) => `  ${String(i).padStart(3)}: linia ${String(p.linie).padStart(3)} ${p.eveniment.padEnd(5)} ${stive[i]}`),
 ].join('\n')
 
 console.log(`--- ${nume} ---\n${rezumat}`)

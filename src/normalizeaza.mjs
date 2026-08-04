@@ -47,6 +47,49 @@ function scoateOpririlePeAcolada(trace) {
   })
 }
 
+// La primul apel dintr-o functie, prologul functiei apelate nu si-a stabilit
+// inca frame pointer-ul. vg_to_opt_trace.py identifica cadrele dupa FP, deci il
+// confunda cu al apelantului si pune in varf o copie a acestuia:
+//
+//   3: linia 11 call [main@17 | main@17*]     <- ar trebui cub@11
+//   5: linia  7 call [main@17 | cub@12 | patrat@7*]   <- corect, FP deja setat
+//
+// Cadrul corect nu exista nicaieri in iesirea convertorului, dar il putem
+// reconstrui din pasul urmator, care il are. Valorile pornesc toate de la "?",
+// ceea ce e si adevarat, si exact ce preda lectia: cadrul se creeaza intai,
+// copierea parametrilor vine imediat dupa.
+function reparaCadrulDeApel(trace) {
+  return trace.map((pas, i) => {
+    if (pas.event !== 'call') return pas
+
+    const stiva = pas.stack_to_render ?? []
+    if (stiva.length < 2) return pas
+
+    const varf = stiva[stiva.length - 1]
+    const dedesubt = stiva[stiva.length - 2]
+    if (varf.func_name !== dedesubt.func_name || varf.line !== dedesubt.line) return pas
+
+    const corect = (trace[i + 1]?.stack_to_render ?? []).at(-1)
+    if (!corect || corect.func_name === dedesubt.func_name) return pas
+
+    const numeVar = corect.ordered_varnames ?? []
+    const locale = {}
+    for (const nume of numeVar) {
+      const v = corect.encoded_locals?.[nume]
+      locale[nume] = esteData(v) ? [v[0], v[1], v[2], '<UNINITIALIZED>'] : v
+    }
+
+    const reparat = {
+      ...varf,
+      func_name: corect.func_name,
+      line: pas.line,
+      ordered_varnames: numeVar,
+      encoded_locals: locale,
+    }
+    return { ...pas, stack_to_render: [...stiva.slice(0, -1), reparat] }
+  })
+}
+
 // NOTA despre primul pas: SPP-Valgrind pune mereu primul pas pe acolada
 // deschisa a lui main. Valgrind-ul din 2015 (g++ 9.3) o facea doar uneori -
 // la lista-dublata da, la exemplele simple nu; diferenta vine din tabelele de
@@ -54,7 +97,9 @@ function scoateOpririlePeAcolada(trace) {
 // referintele exemplelor simple au fost aliniate la el (vezi ci/referinte/).
 
 export function normalizeaza(opt, { cod, intrare = '' }) {
-  const trace = scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : [])
+  const trace = reparaCadrulDeApel(
+    scoateOpririlePeAcolada(Array.isArray(opt?.trace) ? opt.trace : []),
+  )
 
   // --- remaparea adreselor ---------------------------------------------------
   //
